@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcode-select:*)",
+      "Bash(swift package:*)",
+      "Bash(xcrun:*)",
+      "Bash(ls:*)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk iphonesimulator --show-sdk-path 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk iphonesimulator swift build 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -scheme LifeOS -destination 'generic/platform=iOS Simulator' build 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj -scheme LifeOS -destination 'generic/platform=iOS Simulator' build 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj -scheme LifeOS -destination 'generic/platform=iOS' build 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftc \\\\\n  -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk \\\\\n  -target arm64-apple-ios17.0-simulator \\\\\n  -module-name LifeOS \\\\\n  -parse \\\\\n  -I /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator \\\\\n  LifeOS/LifeOSApp.swift LifeOS/ContentView.swift LifeOS/Models/LifeTask.swift 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftc \\\\\n  -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk \\\\\n  -target arm64-apple-ios17.0-simulator \\\\\n  -module-name LifeOS \\\\\n  -parse \\\\\n  LifeOS/LifeOSApp.swift \\\\\n  LifeOS/ContentView.swift \\\\\n  LifeOS/Config.swift \\\\\n  LifeOS/Models/LifeTask.swift \\\\\n  LifeOS/ViewModels/AIManager.swift 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftc \\\\\n  -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.2.sdk \\\\\n  -target arm64-apple-ios17.0-simulator \\\\\n  -module-name LifeOS \\\\\n  -parse \\\\\n  LifeOS/LifeOSApp.swift \\\\\n  LifeOS/ContentView.swift \\\\\n  LifeOS/Config.swift \\\\\n  LifeOS/Models/LifeTask.swift \\\\\n  LifeOS/ViewModels/AIManager.swift \\\\\n  LifeOS/ViewModels/NotificationManager.swift 2>&1)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \\\\\n  -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj \\\\\n  -scheme LifeOS \\\\\n  -destination 'generic/platform=iOS' \\\\\n  build 2>&1 | tail -20)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \\\\\n  -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj \\\\\n  -scheme LifeOS \\\\\n  -destination 'generic/platform=iOS' \\\\\n  CODE_SIGNING_ALLOWED=NO \\\\\n  build 2>&1 | grep -E \"\\(error:|BUILD|FATAL\\)\" | head -10)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \\\\\n  -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj \\\\\n  -scheme LifeOS \\\\\n  -destination 'generic/platform=iOS' \\\\\n  CODE_SIGNING_ALLOWED=NO \\\\\n  build 2>&1 | grep -E \"\\(error:|BUILD|FATAL|===\\)\" | head -10)",
+      "Bash(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \\\\\n  -project /Users/ryan/Desktop/lifeos/LifeOS.xcodeproj \\\\\n  -scheme LifeOS \\\\\n  -destination 'generic/platform=iOS' \\\\\n  CODE_SIGNING_ALLOWED=NO \\\\\n  build 2>&1 | grep -E \"\\(error:|BUILD SUCCEEDED|BUILD FAILED\\)\" | head -10)"
+    ]
+  }
+}
