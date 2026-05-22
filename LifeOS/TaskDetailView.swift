@@ -1,11 +1,14 @@
 import SwiftUI
 import Charts
 import AVFoundation
+import SwiftData
 
 // MARK: - TaskDetailView
 
 struct TaskDetailView: View {
     let task: LifeTask
+    @Environment(\.modelContext) private var modelContext
+    @AppStorage("language") private var language = "en"
 
     // MARK: Feedback State
     @State private var completionRate: Double = 50
@@ -16,11 +19,31 @@ struct TaskDetailView: View {
 
     // MARK: Study State
     @State private var studyMethod: StudyMethod = .pomodoro
-    @State private var pomodoroRemaining: Int = 1500
-    @State private var isPomodoroRunning = false
+    @State private var numberOfSets: Int = 2
+    @State private var learningMinutes: Int = 60
+    @State private var numberOfSetsText: String = "2"
+    @State private var learningMinutesText: String = "60"
+    @FocusState private var isSetsFocused: Bool
+    @FocusState private var isDurationFocused: Bool
+    @State private var currentSet: Int = 1
+    @State private var isFocusActive = false
+    @State private var isBreakActive = false
+    @State private var focusSecondsRemaining: Int = 1500
+    @State private var breakSecondsRemaining: Int = 300
+    @State private var studyContent: String = ""
+
+    // Random Prompt
     @State private var beepTargetSeconds: Int = 0
     @State private var beepElapsed: Int = 0
     @State private var isBeepSessionActive = false
+    @State private var currentPrompt: String?
+    @State private var showPrompt = false
+
+    // Session tracking
+    @State private var sessionStartDate: Date?
+    @State private var sessionElapsedSeconds: Int = 0
+    @State private var showSessionComplete = false
+    @State private var widgetSyncTick: Int = 0
 
     // MARK: Health State
     @State private var weightText: String = ""
@@ -32,11 +55,23 @@ struct TaskDetailView: View {
     // MARK: Finance State
     @State private var dcaAmount: String = ""
 
-    private let pomodoroTotal: Int = 1500
+    private let focusDuration: Int = 1500
+    private let breakDuration: Int = 300
+
+    private let learningPrompts = [
+        "Take a deep breath. What's the one key insight so far?",
+        "Explain what you just learned to an imaginary student.",
+        "What question would you ask to test your understanding?",
+        "Connect this to something you already know.",
+        "If you had to teach this in 60 seconds, what would you say?",
+        "What's the most surprising thing you've learned?",
+        "How would you apply this knowledge tomorrow?",
+        "Pause. What gap in your understanding needs filling?"
+    ]
 
     enum StudyMethod: String, CaseIterable {
         case pomodoro = "Pomodoro"
-        case randomBeep = "Random Beep"
+        case randomBeep = "Random Prompt"
     }
 
     // MARK: Body
@@ -45,10 +80,10 @@ struct TaskDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
 
-                // ── Header Card ──
+                // Header Card
                 headerCard
 
-                // ── Module Section ──
+                // Module Section
                 switch task.taskType {
                 case .study:    studyModule
                 case .health:   healthModule
@@ -59,35 +94,168 @@ struct TaskDetailView: View {
 
                 Divider()
 
-                // ── Feedback Section ──
+                // Feedback Section
                 feedbackSection
             }
             .padding()
         }
-        .background(Color(.systemBackground))
+        .background(Color(UIColor.systemGroupedBackground))
         .contentShape(Rectangle())
         .dismissKeyboardOnTap()
         .navigationTitle(task.title)
         .navigationBarTitleDisplayMode(.inline)
-        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-            // Pomodoro tick
-            if isPomodoroRunning && pomodoroRemaining > 0 {
-                pomodoroRemaining -= 1
+        .overlay {
+            if showPrompt, let prompt = currentPrompt {
+                promptOverlay(prompt)
             }
+        }
+        .overlay {
+            if showSessionComplete {
+                sessionCompleteOverlay
+            }
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            timerTick()
+        }
+        .onDisappear {
+            stopAllTimers()
+        }
+        .onAppear {
+            if task.taskType == .study, task.pomodoroSets > 0 {
+                numberOfSets = task.pomodoroSets
+                numberOfSetsText = String(task.pomodoroSets)
+                learningMinutes = task.pomodoroSets * 30
+                learningMinutesText = String(learningMinutes)
+            }
+        }
+    }
 
-            // Random Beep tick
-            guard isBeepSessionActive else { return }
+    // MARK: - Timer Logic
+
+    private func timerTick() {
+        // Pomodoro focus countdown
+        if isFocusActive && focusSecondsRemaining > 0 {
+            focusSecondsRemaining -= 1
+            sessionElapsedSeconds += 1
+
+            if focusSecondsRemaining == 0 {
+                focusSetComplete()
+            }
+        }
+
+        // Break countdown
+        if isBreakActive && breakSecondsRemaining > 0 {
+            breakSecondsRemaining -= 1
+
+            if breakSecondsRemaining == 0 {
+                breakComplete()
+            }
+        }
+
+        // Random Beep tick
+        if isBeepSessionActive {
             beepElapsed += 1
+            sessionElapsedSeconds += 1
             if beepElapsed >= beepTargetSeconds {
-                AudioServicesPlaySystemSound(1304)
+                triggerRandomPrompt()
                 beepElapsed = 0
                 beepTargetSeconds = Int.random(in: 60...300)
             }
         }
-        .onDisappear {
-            stopPomodoroTimer()
-            stopBeepSession()
+
+        // Sync widget every 5 ticks
+        widgetSyncTick += 1
+        if widgetSyncTick >= 5 {
+            widgetSyncTick = 0
+            syncWidgetState()
         }
+    }
+
+    private func focusSetComplete() {
+        AudioServicesPlaySystemSound(1026)
+        isFocusActive = false
+
+        if currentSet < numberOfSets {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                currentPrompt = learningPrompts.randomElement()
+                showPrompt = true
+            }
+            isBreakActive = true
+            breakSecondsRemaining = breakDuration
+        } else {
+            completeSession()
+        }
+    }
+
+    private func breakComplete() {
+        AudioServicesPlaySystemSound(1027)
+        isBreakActive = false
+        showPrompt = false
+        currentSet += 1
+        focusSecondsRemaining = focusDuration
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            isFocusActive = true
+        }
+    }
+
+    private func triggerRandomPrompt() {
+        AudioServicesPlaySystemSound(1304)
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            currentPrompt = learningPrompts.randomElement()
+            showPrompt = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                if showPrompt {
+                    showPrompt = false
+                }
+            }
+        }
+    }
+
+    private func completeSession() {
+        isFocusActive = false
+        isBreakActive = false
+        let session = FocusSession(
+            date: sessionStartDate ?? Date.now,
+            durationSeconds: sessionElapsedSeconds,
+            method: studyMethod == .pomodoro ? "pomodoro" : "randomPrompt",
+            setsCompleted: currentSet,
+            totalSets: numberOfSets,
+            studyContent: studyContent.isEmpty ? nil : studyContent
+        )
+        modelContext.insert(session)
+        try? modelContext.save()
+
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            showSessionComplete = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                showSessionComplete = false
+            }
+        }
+    }
+
+    private func stopAllTimers() {
+        isFocusActive = false
+        isBreakActive = false
+        isBeepSessionActive = false
+        showPrompt = false
+        WidgetDataSync.clear()
+    }
+
+    private func syncWidgetState() {
+        let seconds = isBreakActive ? breakSecondsRemaining : focusSecondsRemaining
+        WidgetDataSync.update(
+            isActive: isFocusActive || isBreakActive || isBeepSessionActive,
+            isBreak: isBreakActive,
+            setsTotal: numberOfSets,
+            setsCurrent: currentSet,
+            secondsRemaining: seconds,
+            method: studyMethod == .pomodoro ? "pomodoro" : "randomPrompt",
+            studyContent: studyContent.isEmpty ? nil : studyContent
+        )
     }
 
     // MARK: - Header Card
@@ -146,7 +314,7 @@ struct TaskDetailView: View {
             }
         }
         .padding()
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
@@ -154,51 +322,223 @@ struct TaskDetailView: View {
 
     private var studyModule: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionHeader("Focus Session", icon: "brain.head.profile")
+            sectionHeader(L10n.focusSession, icon: "brain.head.profile")
 
-            Picker("Method", selection: $studyMethod) {
+            Picker(L10n.methodLabel, selection: $studyMethod) {
                 ForEach(StudyMethod.allCases, id: \.self) { method in
-                    Text(method.rawValue).tag(method)
+                    Text(method == .pomodoro ? L10n.pomodoroMethod : L10n.randomPromptMethod)
+                        .tag(method)
                 }
             }
             .pickerStyle(.segmented)
+            .id(language)
+
+            // Sets Picker Wheel
+            setsPicker
 
             switch studyMethod {
             case .pomodoro:
                 pomodoroView
             case .randomBeep:
-                randomBeepView
+                randomPromptView
             }
+
+            // Study Content Input
+            studyContentInput
         }
     }
+
+    // MARK: Sets & Duration Picker
+
+    private var setsPicker: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(L10n.setsLabel)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                Spacer()
+
+                HStack(spacing: 12) {
+                    Button {
+                        if numberOfSets > 1 { updateSets(numberOfSets - 1) }
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(numberOfSets > 1 && !(isFocusActive || isBreakActive) ? .blue : .gray.opacity(0.3))
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .disabled(isFocusActive || isBreakActive || numberOfSets <= 1)
+
+                    TextField("", text: $numberOfSetsText)
+                        .keyboardType(.numberPad)
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .monospacedDigit()
+                        .multilineTextAlignment(.center)
+                        .frame(width: 56)
+                        .focused($isSetsFocused)
+                        .disabled(isFocusActive || isBreakActive)
+                        .onChange(of: isSetsFocused) { _, focused in
+                            if !focused { commitSetsText() }
+                        }
+
+                    Button {
+                        if numberOfSets < 32 { updateSets(numberOfSets + 1) }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(numberOfSets < 32 && !(isFocusActive || isBreakActive) ? .blue : .gray.opacity(0.3))
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .disabled(isFocusActive || isBreakActive || numberOfSets >= 32)
+                }
+            }
+
+            HStack {
+                Text(L10n.learningDuration)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer()
+                HStack(spacing: 6) {
+                    TextField("", text: $learningMinutesText)
+                        .keyboardType(.numberPad)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .monospacedDigit()
+                        .multilineTextAlignment(.center)
+                        .frame(width: 80, alignment: .trailing)
+                        .focused($isDurationFocused)
+                        .disabled(isFocusActive || isBreakActive)
+                        .onChange(of: isDurationFocused) { _, focused in
+                            if !focused { commitDurationText() }
+                        }
+                    Text(L10n.minutesUnit)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Text(L10n.setIndicator(currentSet, numberOfSets))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .opacity(isFocusActive || isBreakActive ? 1 : 0.4)
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    // MARK: Sets/Duration sync helpers
+
+    private func updateSets(_ newValue: Int) {
+        let clamped = min(max(newValue, 1), 32)
+        numberOfSets = clamped
+        numberOfSetsText = String(clamped)
+        learningMinutes = clamped * 30
+        learningMinutesText = String(learningMinutes)
+    }
+
+    private func commitSetsText() {
+        guard let parsed = Int(numberOfSetsText.trimmingCharacters(in: .whitespaces)) else {
+            numberOfSetsText = String(numberOfSets)
+            return
+        }
+        updateSets(parsed)
+    }
+
+    private func commitDurationText() {
+        guard let parsed = Int(learningMinutesText.trimmingCharacters(in: .whitespaces)) else {
+            learningMinutesText = String(learningMinutes)
+            return
+        }
+        let clamped = min(max(parsed, 30), 960)
+        learningMinutes = clamped
+        learningMinutesText = String(clamped)
+        numberOfSets = Int(ceil(Double(clamped) / 30.0))
+        numberOfSetsText = String(numberOfSets)
+    }
+
+    // MARK: Pomodoro View
 
     private var pomodoroView: some View {
         VStack(spacing: 20) {
             ZStack {
+                // Background ring
                 Circle()
-                    .stroke(Color.blue.opacity(0.15), lineWidth: 8)
-                Circle()
-                    .trim(from: 0, to: CGFloat(pomodoroRemaining) / CGFloat(pomodoroTotal))
-                    .stroke(Color.blue, style: SwiftUI.StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: pomodoroRemaining)
+                    .stroke(
+                        isBreakActive ? Color.orange.opacity(0.15) : Color.blue.opacity(0.15),
+                        lineWidth: 8
+                    )
 
-                Text(timeString(from: pomodoroRemaining))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: isBreakActive
+                        ? CGFloat(breakSecondsRemaining) / CGFloat(breakDuration)
+                        : CGFloat(focusSecondsRemaining) / CGFloat(focusDuration)
+                    )
+                    .stroke(
+                        isBreakActive ? Color.orange : Color.blue,
+                        style: SwiftUI.StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 1), value: isBreakActive ? breakSecondsRemaining : focusSecondsRemaining)
+
+                VStack(spacing: 4) {
+                    Text(timeString(from: isBreakActive ? breakSecondsRemaining : focusSecondsRemaining))
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+
+                    Text(isBreakActive ? L10n.breakLabel : L10n.focusLabel)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(isBreakActive ? .orange : .blue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 3)
+                        .background((isBreakActive ? Color.orange : Color.blue).opacity(0.12))
+                        .clipShape(Capsule())
+                }
             }
             .frame(width: 200, height: 200)
 
+            // Set progress dots
+            HStack(spacing: 6) {
+                ForEach(1...numberOfSets, id: \.self) { set in
+                    Circle()
+                        .fill(setColor(for: set))
+                        .frame(width: 10, height: 10)
+                        .scaleEffect(set == currentSet && (isFocusActive || isBreakActive) ? 1.3 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentSet)
+                }
+            }
+
             HStack(spacing: 20) {
-                Button(isPomodoroRunning ? "Pause" : "Start") {
-                    isPomodoroRunning ? pausePomodoro() : startPomodoro()
+                Button {
+                    if isFocusActive || isBreakActive {
+                        pauseSession()
+                    } else {
+                        startSession()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: isFocusActive || isBreakActive ? "pause.fill" : "play.fill")
+                        Text(isFocusActive || isBreakActive ? L10n.pause : L10n.start)
+                    }
+                    .fontWeight(.semibold)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Button("Reset") {
-                    resetPomodoro()
+                Button {
+                    resetSession()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text(L10n.reset)
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
@@ -206,45 +546,169 @@ struct TaskDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
-    private var randomBeepView: some View {
-        VStack(spacing: 16) {
-            Text("Plays a sound at random intervals (1-5 min) to check your focus. Start a session and the app will alert you at unpredictable moments.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private func setColor(for set: Int) -> Color {
+        if set < currentSet { return .green }
+        if set == currentSet {
+            if isBreakActive { return .orange }
+            if isFocusActive { return .blue }
+            return .blue.opacity(0.4)
+        }
+        return .gray.opacity(0.3)
+    }
 
-            Button(isBeepSessionActive ? "End Session" : "Start Session") {
-                isBeepSessionActive ? stopBeepSession() : startBeepSession()
+    // MARK: Random Prompt View
+
+    private var randomPromptView: some View {
+        VStack(spacing: 16) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            AngularGradient(
+                                gradient: Gradient(colors: [.indigo, .indigo.opacity(0.4), .indigo.opacity(0.2), .indigo.opacity(0.4)]),
+                                center: .center
+                            ),
+                            lineWidth: 3
+                        )
+                        .frame(width: 56, height: 56)
+                        .rotationEffect(.degrees(isBeepSessionActive ? 360 : 0))
+                        .animation(
+                            isBeepSessionActive
+                                ? .linear(duration: 4).repeatForever(autoreverses: false)
+                                : .default,
+                            value: isBeepSessionActive
+                        )
+
+                    Image(systemName: "waveform.circle.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.indigo)
+                }
+
+                Text(L10n.randomPromptDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.vertical, 8)
+
+            Button {
+                if isBeepSessionActive {
+                    stopBeepSession()
+                } else {
+                    startBeepSession()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isBeepSessionActive ? "stop.fill" : "play.fill")
+                    Text(isBeepSessionActive ? L10n.endSession : L10n.startSession)
+                        .fontWeight(.semibold)
+                }
             }
             .buttonStyle(.borderedProminent)
-            .tint(isBeepSessionActive ? Color.red : Color.blue)
+            .tint(isBeepSessionActive ? .red : .indigo)
             .controlSize(.large)
 
             if isBeepSessionActive {
-                Text("Session active — next beep at a random interval")
+                Text(L10n.sessionActiveHint)
                     .font(.caption)
                     .foregroundStyle(.green)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 12)
+                    .background(Color.green.opacity(0.1))
+                    .clipShape(Capsule())
             }
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: Study Content Input
+
+    private var studyContentInput: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.studyContentLabel)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+
+            TextField(L10n.studyContentPlaceholder, text: $studyContent, axis: .vertical)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .padding()
+                .background(.ultraThinMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .lineLimit(2...5)
+        }
+        .padding()
+        .background(Color(UIColor.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    // MARK: Session Actions
+
+    private func startSession() {
+        sessionStartDate = Date.now
+        sessionElapsedSeconds = 0
+        focusSecondsRemaining = focusDuration
+        currentSet = 1
+        widgetSyncTick = 0
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            isFocusActive = true
+        }
+        syncWidgetState()
+    }
+
+    private func pauseSession() {
+        isFocusActive = false
+        isBreakActive = false
+        syncWidgetState()
+    }
+
+    private func resetSession() {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+            isFocusActive = false
+            isBreakActive = false
+        }
+        focusSecondsRemaining = focusDuration
+        breakSecondsRemaining = breakDuration
+        currentSet = 1
+        sessionElapsedSeconds = 0
+        sessionStartDate = nil
+        WidgetDataSync.clear()
+    }
+
+    private func startBeepSession() {
+        sessionStartDate = Date.now
+        sessionElapsedSeconds = 0
+        isBeepSessionActive = true
+        beepElapsed = 0
+        beepTargetSeconds = Int.random(in: 60...300)
+        widgetSyncTick = 0
+        syncWidgetState()
+    }
+
+    private func stopBeepSession() {
+        isBeepSessionActive = false
+        beepElapsed = 0
+        beepTargetSeconds = 0
+        completeSession()
     }
 
     // MARK: - Health Module
 
     private var healthModule: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionHeader("Health Tracker", icon: "heart.fill")
+            sectionHeader(L10n.healthTracker, icon: "heart.fill")
 
-            // BMI
             VStack(spacing: 12) {
-                Text("BMI Calculator").font(.headline)
+                Text(L10n.bmiCalculator).font(.headline)
 
                 HStack(spacing: 12) {
                     HStack {
@@ -281,12 +745,11 @@ struct TaskDetailView: View {
                 }
             }
             .padding()
-            .background(.regularMaterial)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            // Diet Window
             VStack(alignment: .leading, spacing: 12) {
-                Text("Diet Window (16:8 Fasting)").font(.headline)
+                Text(L10n.dietWindow).font(.headline)
 
                 HStack {
                     DatePicker("Fast start", selection: $fastStart, displayedComponents: .hourAndMinute)
@@ -296,7 +759,7 @@ struct TaskDetailView: View {
                         .labelsHidden()
                 }
 
-                Text("What did you eat? (Protein/Carb ratio)")
+                Text(L10n.whatDidYouEat)
                     .font(.headline)
                     .padding(.top, 4)
 
@@ -307,7 +770,7 @@ struct TaskDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding()
-            .background(.regularMaterial)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
@@ -316,11 +779,10 @@ struct TaskDetailView: View {
 
     private var financeModule: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionHeader("Portfolio Overview", icon: "chart.pie.fill")
+            sectionHeader(L10n.portfolio, icon: "chart.pie.fill")
 
-            // Mock Allocation Chart
             VStack(alignment: .leading, spacing: 12) {
-                Text("Asset Allocation").font(.headline)
+                Text(L10n.assetAllocation).font(.headline)
 
                 Chart(MockAsset.allCases) { asset in
                     BarMark(
@@ -344,12 +806,11 @@ struct TaskDetailView: View {
                 }
             }
             .padding()
-            .background(.regularMaterial)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            // DCA
             VStack(alignment: .leading, spacing: 12) {
-                Text("Daily DCA").font(.headline)
+                Text(L10n.dailyDCALabel).font(.headline)
 
                 HStack {
                     Text("$")
@@ -361,7 +822,7 @@ struct TaskDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding()
-            .background(.regularMaterial)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
@@ -370,27 +831,27 @@ struct TaskDetailView: View {
 
     private var visionModule: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Vision Board", icon: "eye.fill")
-            Text("Visualize your long-term goals. Use this space to reflect on your bigger picture.")
+            sectionHeader(L10n.visionBoard, icon: "eye.fill")
+            Text(L10n.visionBoardHint)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private var generalModule: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("General Task", icon: "square.stack.fill")
-            Text("No special module for this task type. Mark your progress below.")
+            sectionHeader(L10n.generalTask, icon: "square.stack.fill")
+            Text(L10n.generalTaskHint)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial)
+        .background(Color(UIColor.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
@@ -398,7 +859,7 @@ struct TaskDetailView: View {
 
     private var feedbackSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            sectionHeader("Mark as Done / Review", icon: "sparkles.rectangle.stack")
+            sectionHeader(L10n.markAsDone, icon: "sparkles.rectangle.stack")
 
             VStack(spacing: 16) {
                 VStack(spacing: 8) {
@@ -432,7 +893,7 @@ struct TaskDetailView: View {
                                 .controlSize(.small)
                                 .tint(.white)
                         }
-                        Text(isSubmittingFeedback ? "Reflecting..." : "Submit to AI Coach")
+                        Text(isSubmittingFeedback ? L10n.reflectingLabel : L10n.submitToAI)
                             .fontWeight(.semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -444,16 +905,15 @@ struct TaskDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .padding()
-            .background(.regularMaterial)
+            .background(Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
-            // AI Coach Response
             if let response = aiCoachResponse {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Image(systemName: "sparkle")
                             .foregroundStyle(.indigo)
-                        Text("AI Coach")
+                        Text(L10n.aiCoach)
                             .font(.headline)
                             .foregroundStyle(.indigo)
                     }
@@ -479,7 +939,62 @@ struct TaskDetailView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: aiCoachResponse != nil)
     }
 
-    // MARK: - Actions
+    // MARK: - Prompt Overlay
+
+    private func promptOverlay(_ prompt: String) -> some View {
+        VStack {
+            Spacer()
+            VStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.title2)
+                    .foregroundStyle(.indigo)
+                Text(prompt)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.primary)
+            }
+            .padding(24)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: .black.opacity(0.15), radius: 20, x: 0, y: 8)
+            .padding(.horizontal, 30)
+            .padding(.bottom, 40)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .onTapGesture {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                    showPrompt = false
+                }
+            }
+        }
+    }
+
+    // MARK: - Session Complete Overlay
+
+    private var sessionCompleteOverlay: some View {
+        VStack {
+            VStack(spacing: 12) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.green)
+
+                Text(L10n.sessionComplete)
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                Text(L10n.greatWork)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(32)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.2), radius: 24, x: 0, y: 12)
+        }
+        .transition(.scale.combined(with: .opacity))
+    }
+
+    // MARK: - Feedback Action
 
     private func submitFeedback() {
         isSubmittingFeedback = true
@@ -500,39 +1015,6 @@ struct TaskDetailView: View {
             }
             isSubmittingFeedback = false
         }
-    }
-
-    // MARK: - Pomodoro Logic
-
-    private func startPomodoro() {
-        isPomodoroRunning = true
-    }
-
-    private func pausePomodoro() {
-        isPomodoroRunning = false
-    }
-
-    private func resetPomodoro() {
-        isPomodoroRunning = false
-        pomodoroRemaining = pomodoroTotal
-    }
-
-    private func stopPomodoroTimer() {
-        isPomodoroRunning = false
-    }
-
-    // MARK: - Random Beep Logic
-
-    private func startBeepSession() {
-        isBeepSessionActive = true
-        beepElapsed = 0
-        beepTargetSeconds = Int.random(in: 60...300)
-    }
-
-    private func stopBeepSession() {
-        isBeepSessionActive = false
-        beepElapsed = 0
-        beepTargetSeconds = 0
     }
 
     // MARK: - Helpers

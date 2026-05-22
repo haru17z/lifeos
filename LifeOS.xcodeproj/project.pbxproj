@@ -26,6 +26,17 @@
 		0000000000000000000056 /* PeriodGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000055 /* PeriodGoal.swift */; };
 		0000000000000000000058 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000057 /* SettingsView.swift */; };
 		0000000000000000000065 /* Localizable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000059 /* Localizable.swift */; };
+		0000000000000000000073 /* FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000072 /* FocusSession.swift */; };
+		0000000000000000000075 /* Holding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000074 /* Holding.swift */; };
+		0000000000000000000077 /* WidgetDataSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000076 /* WidgetDataSync.swift */; };
+		0000000000000000000079 /* IntentRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000078 /* IntentRouter.swift */; };
+		0000000000000000000083 /* DietEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000082 /* DietEntry.swift */; };
+		0000000000000000000085 /* SleepEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000084 /* SleepEntry.swift */; };
+		0000000000000000000087 /* MoodEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000086 /* MoodEntry.swift */; };
+		0000000000000000000089 /* TransactionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000088 /* TransactionRecord.swift */; };
+		867D195B7ACACADC94F3481F /* ScheduleHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DC456E2FBB298B00696152 /* ScheduleHistoryView.swift */; };
+		94DC456F2FBB298B00696152 /* HealthHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DC456D2FBB298B00696152 /* HealthHistoryView.swift */; };
+		94DC45722FBB29BA00696152 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94DC45712FBB29BA00696152 /* HealthKitManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +60,20 @@
 		0000000000000000000055 /* PeriodGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeriodGoal.swift; sourceTree = "<group>"; };
 		0000000000000000000057 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		0000000000000000000059 /* Localizable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizable.swift; sourceTree = "<group>"; };
+		0000000000000000000072 /* FocusSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSession.swift; sourceTree = "<group>"; };
+		0000000000000000000074 /* Holding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Holding.swift; sourceTree = "<group>"; };
+		0000000000000000000076 /* WidgetDataSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataSync.swift; sourceTree = "<group>"; };
+		0000000000000000000078 /* IntentRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentRouter.swift; sourceTree = "<group>"; };
+		0000000000000000000082 /* DietEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DietEntry.swift; sourceTree = "<group>"; };
+		0000000000000000000084 /* SleepEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepEntry.swift; sourceTree = "<group>"; };
+		0000000000000000000086 /* MoodEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoodEntry.swift; sourceTree = "<group>"; };
+		0000000000000000000088 /* TransactionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionRecord.swift; sourceTree = "<group>"; };
+		0000000000000000000091 /* ScheduleHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleHistoryView.swift; sourceTree = "<group>"; };
+		0000000000000000000093 /* HealthHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthHistoryView.swift; sourceTree = "<group>"; };
+		0000000000000000000095 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		94DC456D2FBB298B00696152 /* HealthHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthHistoryView.swift; sourceTree = "<group>"; };
+		94DC456E2FBB298B00696152 /* ScheduleHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleHistoryView.swift; sourceTree = "<group>"; };
+		94DC45712FBB29BA00696152 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +92,7 @@
 			children = (
 				0000000000000000000031 /* LifeOS */,
 				0000000000000000000041 /* Products */,
+				94DC45662FBB247800696152 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -93,6 +119,12 @@
 				0000000000000000000036 /* UserProfile.swift */,
 				0000000000000000000037 /* FinanceData.swift */,
 				0000000000000000000055 /* PeriodGoal.swift */,
+				0000000000000000000072 /* FocusSession.swift */,
+				0000000000000000000074 /* Holding.swift */,
+				0000000000000000000082 /* DietEntry.swift */,
+				0000000000000000000084 /* SleepEntry.swift */,
+				0000000000000000000086 /* MoodEntry.swift */,
+				0000000000000000000088 /* TransactionRecord.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -100,6 +132,8 @@
 		0000000000000000000033 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				94DC456D2FBB298B00696152 /* HealthHistoryView.swift */,
+				94DC456E2FBB298B00696152 /* ScheduleHistoryView.swift */,
 				0000000000000000000038 /* ScheduleView.swift */,
 				0000000000000000000039 /* VisionView.swift */,
 				0000000000000000000042 /* FinanceView.swift */,
@@ -114,8 +148,11 @@
 		0000000000000000000034 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				94DC45712FBB29BA00696152 /* HealthKitManager.swift */,
 				0000000000000000000017 /* AIManager.swift */,
 				0000000000000000000018 /* NotificationManager.swift */,
+				0000000000000000000076 /* WidgetDataSync.swift */,
+				0000000000000000000078 /* IntentRouter.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -134,6 +171,16 @@
 				0000000000000000000015 /* LifeOS.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		94DC45662FBB247800696152 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				0000000000000000000091 /* ScheduleHistoryView.swift */,
+				0000000000000000000093 /* HealthHistoryView.swift */,
+				0000000000000000000095 /* HealthKitManager.swift */,
+			);
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -215,6 +262,16 @@
 				0000000000000000000028 /* UserProfile.swift in Sources */,
 				0000000000000000000029 /* FinanceData.swift in Sources */,
 				0000000000000000000056 /* PeriodGoal.swift in Sources */,
+				94DC45722FBB29BA00696152 /* HealthKitManager.swift in Sources */,
+				0000000000000000000073 /* FocusSession.swift in Sources */,
+				0000000000000000000075 /* Holding.swift in Sources */,
+				0000000000000000000083 /* DietEntry.swift in Sources */,
+				0000000000000000000085 /* SleepEntry.swift in Sources */,
+				0000000000000000000087 /* MoodEntry.swift in Sources */,
+				0000000000000000000089 /* TransactionRecord.swift in Sources */,
+				0000000000000000000077 /* WidgetDataSync.swift in Sources */,
+				94DC456F2FBB298B00696152 /* HealthHistoryView.swift in Sources */,
+				0000000000000000000079 /* IntentRouter.swift in Sources */,
 				0000000000000000000044 /* ScheduleView.swift in Sources */,
 				0000000000000000000045 /* VisionView.swift in Sources */,
 				0000000000000000000046 /* FinanceView.swift in Sources */,
@@ -223,6 +280,7 @@
 				0000000000000000000049 /* FeedbackModalView.swift in Sources */,
 				0000000000000000000058 /* SettingsView.swift in Sources */,
 				0000000000000000000065 /* Localizable.swift in Sources */,
+				867D195B7ACACADC94F3481F /* ScheduleHistoryView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,6 +399,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeOS uses your step count data to display daily activity on your health dashboard.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "LifeOS reads your Health data to show personalized health insights.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -367,6 +427,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "LifeOS uses your step count data to display daily activity on your health dashboard.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "LifeOS reads your Health data to show personalized health insights.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

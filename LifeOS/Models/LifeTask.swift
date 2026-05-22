@@ -33,6 +33,7 @@ final class LifeTask {
     var isExactTime: Bool
     var exactStartTime: Date?
     var exactEndTime: Date?
+    var pomodoroSets: Int
 
     init(
         id: UUID = UUID(),
@@ -47,7 +48,8 @@ final class LifeTask {
         isCompleted: Bool = false,
         isExactTime: Bool = false,
         exactStartTime: Date? = nil,
-        exactEndTime: Date? = nil
+        exactEndTime: Date? = nil,
+        pomodoroSets: Int = 0
     ) {
         self.id = id
         self.title = title
@@ -62,5 +64,6 @@ final class LifeTask {
         self.isExactTime = isExactTime
         self.exactStartTime = exactStartTime
         self.exactEndTime = exactEndTime
+        self.pomodoroSets = pomodoroSets
     }
 }

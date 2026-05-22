@@ -3,6 +3,7 @@ import SwiftData
 
 @Model
 final class FinanceData {
+    var id: UUID
     var dailyDCAAmount: Double
     var nasdaq100Allocation: Double
     var sp500Allocation: Double
@@ -10,12 +11,14 @@ final class FinanceData {
     var cashAllocation: Double
 
     init(
+        id: UUID = UUID(),
         dailyDCAAmount: Double = 0,
         nasdaq100Allocation: Double = 30,
         sp500Allocation: Double = 40,
         btcAllocation: Double = 20,
         cashAllocation: Double = 10
     ) {
+        self.id = id
         self.dailyDCAAmount = dailyDCAAmount
         self.nasdaq100Allocation = nasdaq100Allocation
         self.sp500Allocation = sp500Allocation
